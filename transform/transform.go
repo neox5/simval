@@ -8,6 +8,7 @@ type State[T any] interface {
 // Transformation modifies a value.
 type Transformation[T any] interface {
 	Apply(incoming T, state State[T]) T
+	Name() string
 }
 
 // Accumulate adds each value to a running total.
@@ -23,6 +24,11 @@ func NewAccumulate[T Numeric]() *Accumulate[T] {
 func (t *Accumulate[T]) Apply(incoming T, state State[T]) T {
 	current := state.GetState()
 	return current + incoming
+}
+
+// Name returns the transform identifier.
+func (t *Accumulate[T]) Name() string {
+	return "Accumulate"
 }
 
 // Numeric defines types that support arithmetic operations.

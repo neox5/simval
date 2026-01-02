@@ -10,4 +10,5 @@ type Value[T any] interface {
 	Value() T
 	Clone() Value[T]
 	SetState(T)
+	SetUpdateHook(UpdateHook[T])
 }

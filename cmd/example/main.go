@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Create clock
-	clk := clock.NewPeriodicClock(500 * time.Millisecond)
+	clk := clock.NewPeriodicClock(100 * time.Millisecond)
 
 	// Create random source
 	randomSrc := source.NewRandomIntSource(clk, 1, 10)
@@ -23,14 +23,16 @@ func main() {
 	// Create reset-on-read value (cloned from accumulated)
 	resetOnRead := value.NewResetOnRead(accumulated.Clone(), 0)
 
+	// Enable tracing with default formatter
+	resetOnRead.SetUpdateHook(value.NewDefaultTraceHook[int]())
+
 	// Start clock
 	clk.Start()
 	defer clk.Stop()
 
 	// Read and print every 500ms
-	for range 20 {
-		fmt.Printf("Accumulated: %d, ResetOnRead: %d\n",
-			accumulated.Value(),
+	for range 10 {
+		fmt.Printf(">>> ResetOnRead Value: %d\n",
 			resetOnRead.Value(),
 		)
 

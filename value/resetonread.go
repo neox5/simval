@@ -38,3 +38,8 @@ func (v *ResetOnRead[T]) SetState(state T) {
 	defer v.mu.Unlock()
 	v.resetValue = state
 }
+
+// SetUpdateHook passes hook through to inner value.
+func (v *ResetOnRead[T]) SetUpdateHook(hook UpdateHook[T]) {
+	v.inner.SetUpdateHook(hook)
+}

@@ -2,6 +2,7 @@ package value
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/neox5/simval/transform"
 )
@@ -11,8 +12,9 @@ type SimpleValue[T any] struct {
 	source     Publisher[T]
 	transforms []transform.Transformation[T]
 
-	mu      sync.RWMutex
-	current T
+	mu         sync.RWMutex
+	current    T
+	updateHook atomic.Value // stores UpdateHook[T]
 }
 
 // New creates a new SimpleValue with the given source and optional transforms.
@@ -37,14 +39,43 @@ func (v *SimpleValue[T]) run() {
 	for sourceValue := range sourceChan {
 		v.mu.Lock()
 
-		transformed := sourceValue
-		for _, t := range v.transforms {
-			transformed = t.Apply(transformed, v)
+		hook := v.getUpdateHook()
+
+		// Notify: input received
+		if hook != nil {
+			v.safeHookCall(func() { hook.OnInput(sourceValue, v.current) })
 		}
 
-		v.current = transformed
+		// Apply transforms with notifications
+		transformed := sourceValue
+		for _, t := range v.transforms {
+			input := transformed
+			currentState := v.current
+
+			transformed = t.Apply(transformed, v)
+
+			if hook != nil {
+				name := t.Name()
+				v.safeHookCall(func() {
+					hook.OnTransform(name, input, transformed, currentState)
+				})
+			}
+		}
+
+		// Update state (triggers AfterUpdate)
+		v.setState(transformed)
 
 		v.mu.Unlock()
+	}
+}
+
+// setState updates the internal state and triggers AfterUpdate hook.
+// Must be called with v.mu held (locked).
+func (v *SimpleValue[T]) setState(newState T) {
+	v.current = newState
+
+	if hook := v.getUpdateHook(); hook != nil {
+		v.safeHookCall(func() { hook.AfterUpdate(newState) })
 	}
 }
 
@@ -71,5 +102,34 @@ func (v *SimpleValue[T]) Clone() Value[T] {
 func (v *SimpleValue[T]) SetState(state T) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	v.current = state
+
+	v.setState(state)
+}
+
+// SetUpdateHook sets the update hook for this value.
+// Pass nil to disable hook.
+func (v *SimpleValue[T]) SetUpdateHook(hook UpdateHook[T]) {
+	if hook == nil {
+		v.updateHook.Store((UpdateHook[T])(nil))
+	} else {
+		v.updateHook.Store(hook)
+	}
+}
+
+// getUpdateHook retrieves current hook (internal).
+func (v *SimpleValue[T]) getUpdateHook() UpdateHook[T] {
+	if h := v.updateHook.Load(); h != nil {
+		return h.(UpdateHook[T])
+	}
+	return nil
+}
+
+// safeHookCall executes hook synchronously with panic recovery.
+func (v *SimpleValue[T]) safeHookCall(fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Hook panicked, silently ignore
+		}
+	}()
+	fn()
 }
