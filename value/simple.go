@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/neox5/simval/transform"
+	"github.com/neox5/simv/transform"
 )
 
 // SimpleValue is a standard implementation with source and transforms.

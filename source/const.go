@@ -3,7 +3,7 @@ package source
 import (
 	"sync"
 
-	"github.com/neox5/simval/clock"
+	"github.com/neox5/simv/clock"
 )
 
 // ConstSource always returns the same value.
