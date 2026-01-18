@@ -5,12 +5,14 @@ import (
 	"sync"
 
 	"github.com/neox5/simv/clock"
+	"github.com/neox5/simv/seed"
 )
 
 // RandomIntSource generates random integers within a range [min, max].
 type RandomIntSource struct {
 	clock    clock.Clock
 	min, max int
+	rng      *rand.Rand
 
 	initOnce    sync.Once
 	clockChan   <-chan struct{}
@@ -20,11 +22,14 @@ type RandomIntSource struct {
 
 // NewRandomIntSource creates a source that generates random integers
 // in the inclusive range [min, max].
+// Uses the global seed registry for deterministic sequences when seeded.
 func NewRandomIntSource(clk clock.Clock, min, max int) *RandomIntSource {
+	seed1, seed2 := seed.Next()
 	return &RandomIntSource{
 		clock: clk,
 		min:   min,
 		max:   max,
+		rng:   rand.New(rand.NewPCG(seed1, seed2)),
 	}
 }
 
@@ -45,7 +50,7 @@ func (s *RandomIntSource) Subscribe() <-chan int {
 
 func (s *RandomIntSource) run() {
 	for range s.clockChan {
-		value := s.min + rand.IntN(s.max-s.min+1)
+		value := s.min + s.rng.IntN(s.max-s.min+1)
 
 		s.mu.Lock()
 		subs := s.subscribers

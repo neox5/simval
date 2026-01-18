@@ -32,12 +32,16 @@ import (
     "time"
 
     "github.com/neox5/simv/clock"
+    "github.com/neox5/simv/seed"
     "github.com/neox5/simv/source"
     "github.com/neox5/simv/transform"
     "github.com/neox5/simv/value"
 )
 
 func main() {
+    // Optional: Initialize seed for repeatable simulations
+    seed.Init(12345)
+
     // Create clock that ticks every 100ms
     clk := clock.NewPeriodicClock(100 * time.Millisecond)
 
@@ -75,6 +79,18 @@ simV uses a pipeline architecture:
 - **Value**: Manages state and provides thread-safe access
 
 ## Core Concepts
+
+### Seed
+
+Control repeatability of random value generation.
+
+```go
+// Repeatable simulations - same seed produces identical sequences
+seed.Init(12345)
+
+// Non-repeatable (default) - auto-initializes with time-based seed
+// No need to call Init if repeatability is not required
+```
 
 ### Clock
 
@@ -129,6 +145,7 @@ val.SetUpdateHook(value.NewDefaultTraceHook[int]())
 - Subscription-based value distribution
 - Composable transform pipeline
 - Observable update cycles via hooks
+- Repeatable simulations via seed control
 - Zero external dependencies
 
 ## Examples

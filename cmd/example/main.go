@@ -5,12 +5,17 @@ import (
 	"time"
 
 	"github.com/neox5/simv/clock"
+	"github.com/neox5/simv/seed"
 	"github.com/neox5/simv/source"
 	"github.com/neox5/simv/transform"
 	"github.com/neox5/simv/value"
 )
 
 func main() {
+	// Initialize seed for repeatable simulations
+	// Comment out this line for non-repeatable (time-based) behavior
+	seed.Init(12345)
+
 	// Create clock
 	clk := clock.NewPeriodicClock(100 * time.Millisecond)
 
