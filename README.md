@@ -17,7 +17,7 @@ simV provides thread-safe entities representing different types of time-varying 
 ## Installation
 
 ```bash
-go get github.com/neox5/simv@v0.1.0
+go get github.com/neox5/simv@latest
 ```
 
 **Requirements:** Go 1.25+
@@ -64,6 +64,13 @@ func main() {
     // Read current value
     current := resetVal.Value()
     fmt.Printf("Current value: %d\n", current)
+
+    // Access metrics without side effects
+    stats := resetVal.Stats()
+    fmt.Printf("Updates: %d, Current: %d\n",
+        stats.UpdateCount,
+        stats.CurrentValue,
+    )
 }
 ```
 
@@ -100,6 +107,10 @@ Provides timing signals for value generation.
 clk := clock.NewPeriodicClock(100 * time.Millisecond)
 clk.Start()
 defer clk.Stop()
+
+// Access metrics
+stats := clk.Stats()
+fmt.Printf("Ticks: %d, Running: %v\n", stats.TickCount, stats.IsRunning)
 ```
 
 ### Source
@@ -112,6 +123,13 @@ constSrc := source.NewConstSource(clk, 42)
 
 // Random integers
 randomSrc := source.NewRandomIntSource(clk, 1, 100)
+
+// Access metrics
+stats := randomSrc.Stats()
+fmt.Printf("Generated: %d, Subscribers: %d\n",
+    stats.GenerationCount,
+    stats.SubscriberCount,
+)
 ```
 
 ### Transform
@@ -136,6 +154,56 @@ resetVal := value.NewResetOnRead(val.Clone(), 0)
 
 // Enable tracing
 val.SetUpdateHook(value.NewDefaultTraceHook[int]())
+
+// Access metrics without side effects
+stats := val.Stats()
+fmt.Printf("Updates: %d, Current: %d, Transforms: %d\n",
+    stats.UpdateCount,
+    stats.CurrentValue,
+    stats.TransformCount,
+)
+```
+
+## Observability
+
+### Metrics
+
+All components expose metrics via `Stats()` methods for integration with Prometheus/OTEL:
+
+```go
+// Clock metrics
+clockStats := clk.Stats()
+// - TickCount: total ticks generated
+// - IsRunning: current operational state
+// - Interval: tick rate
+
+// Source metrics
+sourceStats := src.Stats()
+// - GenerationCount: total values produced
+// - SubscriberCount: active subscriptions
+
+// Value metrics
+valueStats := val.Stats()
+// - UpdateCount: total updates received
+// - CurrentValue: current value without side effects
+// - TransformCount: number of transforms in chain
+```
+
+**Prometheus example:**
+
+```go
+tickCounter := prometheus.NewCounter(...)
+stats := clk.Stats()
+tickCounter.Add(float64(stats.TickCount))
+```
+
+### Tracing
+
+Enable trace output to observe value flow through the pipeline:
+
+```go
+val.SetUpdateHook(value.NewDefaultTraceHook[int]())
+// Output: [15:04:05.000] 7 | Accumulate(s:42) | 49
 ```
 
 ## Features
@@ -145,6 +213,7 @@ val.SetUpdateHook(value.NewDefaultTraceHook[int]())
 - Subscription-based value distribution
 - Composable transform pipeline
 - Observable update cycles via hooks
+- Metrics exposure for monitoring systems
 - Repeatable simulations via seed control
 - Zero external dependencies
 

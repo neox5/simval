@@ -53,3 +53,8 @@ func (v *ResetOnRead[T]) SetState(state T) {
 func (v *ResetOnRead[T]) SetUpdateHook(hook UpdateHook[T]) {
 	v.inner.SetUpdateHook(hook)
 }
+
+// Stats returns current value metrics without triggering reset.
+func (v *ResetOnRead[T]) Stats() ValueStats[T] {
+	return v.inner.Stats()
+}

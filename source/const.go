@@ -2,6 +2,7 @@ package source
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/neox5/simv/clock"
 )
@@ -11,10 +12,11 @@ type ConstSource[T any] struct {
 	clock clock.Clock
 	value T
 
-	initOnce    sync.Once
-	clockChan   <-chan struct{}
-	mu          sync.Mutex
-	subscribers []chan T
+	initOnce        sync.Once
+	clockChan       <-chan struct{}
+	mu              sync.Mutex
+	subscribers     []chan T
+	generationCount atomic.Uint64
 }
 
 // NewConstSource creates a source that always returns the given value.
@@ -43,6 +45,7 @@ func (s *ConstSource[T]) Subscribe() <-chan T {
 func (s *ConstSource[T]) run() {
 	for range s.clockChan {
 		value := s.value
+		s.generationCount.Add(1)
 
 		s.mu.Lock()
 		subs := s.subscribers
@@ -59,4 +62,16 @@ func (s *ConstSource[T]) run() {
 		close(subChan)
 	}
 	s.mu.Unlock()
+}
+
+// Stats returns current source metrics.
+func (s *ConstSource[T]) Stats() SourceStats {
+	s.mu.Lock()
+	subCount := len(s.subscribers)
+	s.mu.Unlock()
+
+	return SourceStats{
+		GenerationCount: s.generationCount.Load(),
+		SubscriberCount: subCount,
+	}
 }

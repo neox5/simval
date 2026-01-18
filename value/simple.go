@@ -12,9 +12,10 @@ type SimpleValue[T any] struct {
 	source     Publisher[T]
 	transforms []transform.Transformation[T]
 
-	mu         sync.RWMutex
-	current    T
-	updateHook atomic.Value // stores UpdateHook[T]
+	mu          sync.RWMutex
+	current     T
+	updateHook  atomic.Value // stores UpdateHook[T]
+	updateCount atomic.Uint64
 }
 
 // New creates a new SimpleValue with the given source and optional transforms.
@@ -64,6 +65,7 @@ func (v *SimpleValue[T]) run() {
 
 		// Update state (triggers AfterUpdate)
 		v.setState(transformed)
+		v.updateCount.Add(1)
 
 		v.mu.Unlock()
 	}
@@ -122,6 +124,18 @@ func (v *SimpleValue[T]) SetUpdateHook(hook UpdateHook[T]) {
 		v.updateHook.Store((UpdateHook[T])(nil))
 	} else {
 		v.updateHook.Store(hook)
+	}
+}
+
+// Stats returns current value metrics.
+func (v *SimpleValue[T]) Stats() ValueStats[T] {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	return ValueStats[T]{
+		UpdateCount:    v.updateCount.Load(),
+		CurrentValue:   v.current,
+		TransformCount: len(v.transforms),
 	}
 }
 

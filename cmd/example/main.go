@@ -43,4 +43,27 @@ func main() {
 
 		time.Sleep(500 * time.Millisecond)
 	}
+
+	// Print stats after execution
+	fmt.Println("\n=== Final Stats ===")
+
+	clockStats := clk.Stats()
+	fmt.Printf("Clock: ticks=%d running=%v interval=%v\n",
+		clockStats.TickCount,
+		clockStats.IsRunning,
+		clockStats.Interval,
+	)
+
+	sourceStats := randomSrc.Stats()
+	fmt.Printf("Source: generations=%d subscribers=%d\n",
+		sourceStats.GenerationCount,
+		sourceStats.SubscriberCount,
+	)
+
+	valueStats := resetOnRead.Stats()
+	fmt.Printf("Value: updates=%d current=%d transforms=%d\n",
+		valueStats.UpdateCount,
+		valueStats.CurrentValue,
+		valueStats.TransformCount,
+	)
 }

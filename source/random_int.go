@@ -3,6 +3,7 @@ package source
 import (
 	"math/rand/v2"
 	"sync"
+	"sync/atomic"
 
 	"github.com/neox5/simv/clock"
 	"github.com/neox5/simv/seed"
@@ -14,10 +15,11 @@ type RandomIntSource struct {
 	min, max int
 	rng      *rand.Rand
 
-	initOnce    sync.Once
-	clockChan   <-chan struct{}
-	mu          sync.Mutex
-	subscribers []chan int
+	initOnce        sync.Once
+	clockChan       <-chan struct{}
+	mu              sync.Mutex
+	subscribers     []chan int
+	generationCount atomic.Uint64
 }
 
 // NewRandomIntSource creates a source that generates random integers
@@ -51,6 +53,7 @@ func (s *RandomIntSource) Subscribe() <-chan int {
 func (s *RandomIntSource) run() {
 	for range s.clockChan {
 		value := s.min + s.rng.IntN(s.max-s.min+1)
+		s.generationCount.Add(1)
 
 		s.mu.Lock()
 		subs := s.subscribers
@@ -67,4 +70,16 @@ func (s *RandomIntSource) run() {
 		close(subChan)
 	}
 	s.mu.Unlock()
+}
+
+// Stats returns current source metrics.
+func (s *RandomIntSource) Stats() SourceStats {
+	s.mu.Lock()
+	subCount := len(s.subscribers)
+	s.mu.Unlock()
+
+	return SourceStats{
+		GenerationCount: s.generationCount.Load(),
+		SubscriberCount: subCount,
+	}
 }
