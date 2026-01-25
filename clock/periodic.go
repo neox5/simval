@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -11,6 +12,7 @@ type PeriodicClock struct {
 	ticker    *time.Ticker
 	tickChan  chan struct{}
 	stop      chan struct{}
+	wg        sync.WaitGroup
 	tickCount atomic.Uint64
 	running   atomic.Bool
 }
@@ -28,7 +30,7 @@ func NewPeriodicClock(interval time.Duration) *PeriodicClock {
 func (c *PeriodicClock) Start() {
 	c.ticker = time.NewTicker(c.interval)
 	c.running.Store(true)
-	go c.run()
+	c.wg.Go(c.run)
 }
 
 func (c *PeriodicClock) run() {
@@ -54,6 +56,7 @@ func (c *PeriodicClock) Stop() {
 	}
 	c.running.Store(false)
 	close(c.stop)
+	c.wg.Wait()
 	close(c.tickChan)
 }
 
