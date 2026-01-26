@@ -26,12 +26,11 @@ type RandomIntSource struct {
 // in the inclusive range [min, max].
 // Uses the global seed registry for deterministic sequences when seeded.
 func NewRandomIntSource(clk clock.Clock, min, max int) *RandomIntSource {
-	seed1, seed2 := seed.Next()
 	return &RandomIntSource{
 		clock: clk,
 		min:   min,
 		max:   max,
-		rng:   rand.New(rand.NewPCG(seed1, seed2)),
+		rng:   seed.NewRand(),
 	}
 }
 
